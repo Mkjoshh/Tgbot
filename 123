@@ -1,0 +1,41 @@
+import os
+from telethon import TelegramClient, events
+from google.api_core.client_options import ClientOptions
+
+# Telegram API
+api_id = 7041177547  # ЗАМЕНИ НА СВОЙ API ID
+api_hash = 'AAHpPEdmn-USIAo0WzSDr7X44cQnEL7zZW8' # ЗАМЕНИ НА СВОЙ API HASH
+bot_token = 'YOUR_BOT_TOKEN'  # ЗАМЕНИ НА СВОЙ BOT TOKEN
+
+# Gemini API 
+api_key = 'AIzaSyCN666KgKek6MtKdPDDZgDg8rkPZFCWMS0' # ЗАМЕНИ НА СВОЙ API KEY
+
+# Настройки для Gemini API 
+endpoint = "https://generativelanguage.googleapis.com" 
+client_options = ClientOptions(api_endpoint=endpoint)
+client = google.generativelanguage.v1beta2.GenerativeLanguageServiceAsyncClient(
+    client_options=client_options, credentials=api_key
+)
+
+# Telegram Bot
+client_telegram = TelegramClient('your_bot', api_id, api_hash).start(bot_token=bot_token)
+
+@client_telegram.on(events.NewMessage)
+async def handler(event):
+    user_message = event.message.text
+
+    # Сформировать запрос к Gemini API 
+    response_gemini = await client.generate_text(
+        model='models/chat-bison-001', # или другая модель, проверьте документацию
+        prompt=user_message, 
+        temperature=0.7, 
+        max_output_tokens=256 
+    )
+
+    # Обработать ответ от Gemini API
+    response_text = f"```{response_gemini.text}```" # Используем моноширинный шрифт 
+
+    # Отправить ответ пользователю Telegram
+    await event.respond(response_text) 
+
+client_telegram.run_until_disconnected()
