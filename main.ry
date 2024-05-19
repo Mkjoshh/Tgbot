@@ -1,1 +1,69 @@
+from telethon import TelegramClient, events
+from google.api_core import client_options as client_options_lib
+from google.api_core import gapic_v1
+from google.api_core import retry as retry_lib
+from google.auth import credentials as ga_credentials
+from google.auth.transport import grpc
+from google.auth.transport.grpc import SslCredentials
+from google.cloud.generativeai_v1beta2.services.model_service import ModelServiceClient
+from google.cloud.generativeai_v1beta2.types import model_service
+import os
 
+# Ваши данные от BotFather и Gemini API
+api_id = 22462137
+api_hash = 'f76affbfd017a2d3cdf9d2ff51d58949'
+bot_token = '7041177547:AAHpPEdmn-USIAo0WzSDr7X44cQnEL7zZW8'
+gemini_api_key = 'AIzaSyCN666KgKek6MtKdPDDZgDg8rkPZFCWMS0'
+
+
+client = TelegramClient('anon', api_id, api_hash).start(bot_token=bot_token)
+
+def get_gemini_response(user_message, gemini_api_key):
+    # Create a client
+    client = ModelServiceClient(
+    client_options=client_options_lib.ClientOptions(
+        api_endpoint="generativelanguage.googleapis.com",
+    ),
+    )
+
+    # The full resource name of the model
+    model_name = "models/chat-bison-001"
+
+    #  Формирование запроса к Gemini API
+    prompt = user_message
+
+    response = client.generate_text(
+        model=model_name,
+        prompt=prompt,
+        temperature=0.5, #  Temperature controls the randomness of the output
+        candidate_count=1, #  Number of generated responses
+        top_k=40, #  Controls the diversity of the generated text
+        top_p=0.95, #  Controls the likelihood of the next token
+        stop_sequences=[], #  Sequences at which text generation is stopped
+    )
+
+    #   Обработка ответа от Gemini API
+    gemini_text = response.candidates[0].text
+
+    return gemini_text
+
+
+@client.on(events.NewMessage(pattern='/start'))
+async def start(event):
+    sender = await event.get_sender()
+    await event.respond(f'Привет, {sender.first_name}!')
+    raise events.StopPropagation
+
+
+@client.on(events.NewMessage)
+async def echo(event):
+    # Получаем текст сообщения от пользователя
+    user_message = event.message.text
+
+    # Получаем ответ от Gemini API
+    response = get_gemini_response(user_message, gemini_api_key)
+
+    # Отправляем ответ пользователю
+    await event.respond(response)
+
+client.run_until_disconnected()
